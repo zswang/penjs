@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>h5page example</title>
+  <script src="../node_modules/jnodes/jnodes.js"></script>
+  <script src="../node_modules/jhtmls/jhtmls.js"></script>
+  <script src="../node_modules/h5tap/h5tap.js"></script>
+  <script src="../node_modules/h5ajax/h5ajax.js"></script>
+  <script src="../node_modules/mockjs/dist/mock.js"></script>
+  <script src="../h5page.js"></script>
+</head>
+
+<body>
+  <div id="app_plus">
+    <script type="text/jhtmls">
+      var data = { count: 0 };
+      <button :bind="data" @tap="data.count++">tap plus #{data.count}</button>
+    </script>
+  </div>
+  <div id="app">
+    <script type="text/jhtmls">
+      var info = {
+        createCount: 0,
+        destroyCount: 0,
+      }
+      <h1>jhtmls -- #{title} -- #{time}</h1>
+      <h3 :bind="info">create #{info.createCount} destroy: #{info.destroyCount}</h3>
+      var asc = 1;
+      <button @tap="now()">now</button>
+      <button @tap="ajax()">ajax</button>
+      <button @tap="sort(items, asc = -asc)">sort</button>
+      <button @tap="push(items)">push</button>
+      <ul :bind="items">
+        items.forEach(function (item) {
+        <li :bind="item" @create="info.createCount++" @destroy="info.destroyCount++">
+          if (item.editing === 'jhtmls') {
+            <input type="text"
+              :bind="item.title"
+              :value="item.title"
+              @create="this.focus();"
+              @keydown="if (event.keyCode === 13) { this.blur(); }"
+              @focusout="item.title = this.value; item.editing = false;">
+          } else {
+            <span @dblclick="item.editing = 'jhtmls'">#{item.title}</span>
+            <button @tap="remove(items, item)">remove</button>
+          }
+        </li>
+        });
+      </ul>
+    </script>
+  </div>
+  <div id="app_ejs">
+    <script type="text/ejs">
+      <%
+      var info = {
+        createCount: 0,
+        destroyCount: 0,
+      }
+      %>
+      <h1>ejs -- <%= title %> -- <%= time %></h1>
+      <h3 :bind="info">create <%= info.createCount %> destroy: <%= info.destroyCount %></h3>
+      <% var asc = 1; %>
+      <button @tap="now()">now</button>
+      <button @tap="ajax()">ajax</button>
+      <button @tap="sort(items, asc = -asc)">sort</button>
+      <button @tap="push(items)">push</button>
+      <ul :bind="items">
+        <% items.forEach(function (item) { %>
+        <li :bind="item" @create="info.createCount++" @destroy="info.destroyCount++">
+          <% if (item.editing === 'ejs') { %>
+            <input type="text"
+              :bind="item.title"
+              :value="item.title"
+              @create="this.focus();"
+              @keydown="if (event.keyCode === 13) { this.blur(); }"
+              @focusout="item.title = this.value; item.editing = false">
+          <% } else { %>
+            <span @dblclick="item.editing = 'ejs'"><%= item.title %></span>
+            <button @tap="remove(items, item)">remove</button>
+          <% } %>
+        </li>
+        <% }); %>
+      </ul>
+    </script>
+  </div>
+</body>
+<script src="../node_modules/jnodes/src/js/Compiler/ejs.js"></script>
+<script src="../node_modules/ejs/ejs.js"></script>
+<script>
+  var ajax_count = 0;
+  Mock.mock(/^\/movie\/title/, function () {
+    return {
+      title: 'hello ' + (ajax_count++)
+    };
+  })
+
+  var options = {
+    data: {
+      time: Date.now(),
+      title: 'none',
+      items: [{ title: Math.random(), editing: false }],
+    },
+    init: function (binder) {
+      binder.registerCompiler('ejs', function (templateCode, bindObjectName) {
+        var code = h5page.Parser.build(h5page.Parser.parse(templateCode), bindObjectName, compiler_ejs);
+        return ejs.compile(code);
+      });
+    },
+    methods: {
+      now: function () {
+        this.time = Date.now();
+      },
+      ajax: function () {
+        var url = '/movie/title';
+        var self = this;
+        h5page.Ajax.get(url, function (err, reply) {
+          if (err) {
+            return;
+          }
+          self.title = reply.title;
+        })
+      },
+      sort: function (items, asc) {
+        items.sort(function (a, b) {
+          return String(a.title).localeCompare(b.title) * asc;
+        });
+      },
+      push: function (items) {
+        items.push({ title: Math.random(), editing: false });
+      },
+      remove: function (items, item) {
+        var index = items.indexOf(item);
+        if (index >= 0) {
+          items.splice(index, 1);
+        }
+      }
+    },
+  };
+  h5page('#app_plus');
+  h5page('#app_ejs', options);
+  h5page('#app', options);
+
+</script>
+
+</html>
