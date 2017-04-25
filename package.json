@@ -1,7 +1,7 @@
 {
   "name": "h5page",
   "version": "0.0.1",
-  "description": "",
+  "description": "Mobile-side page small development framework.",
   "main": "h5page.js",
   "scripts": {
     "_update_version": "node version.js",
