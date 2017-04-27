@@ -1,0 +1,105 @@
+<!doctype html>
+<html data-framework="vue">
+
+<head>
+  <meta charset="utf-8">
+  <title>h5page • TodoMVC</title>
+  <link rel="stylesheet" href="node_modules/todomvc-common/base.css">
+  <link rel="stylesheet" href="node_modules/todomvc-app-css/index.css">
+</head>
+
+<body>
+  <section class="todoapp">
+    <script type="text/jhtmls">
+      var info = {
+        remaining: 0,
+        count: 0,
+      };
+
+      function updateInfo() {
+        info.count = todos.length;
+        info.remaining = todos.filter(function (todo) {
+          return todo.completed;
+        }).length;
+      }
+      <header class="header">
+        <h1>todos</h1>
+        <input class="new-todo" autofocus autocomplete="off" placeholder="What needs to be done?"
+          @keyup.enter="addTodo(this.value.trim()); this.value = ''; updateInfo();">
+      </header>
+      <section class="main" :bind="info">
+        function filters() {
+          return ({
+            all: function () {
+              return todos;
+            },
+            active: function () {
+              return todos.filter(function (todo) {
+                return !todo.completed;
+              });
+            },
+            completed: function () {
+              return todos.filter(function (todo) {
+                return todo.completed;
+              });
+            },
+          }[visibility])();
+        }
+
+        updateInfo();
+        if (todos.length <= 0) {
+          return;
+        }
+        <input class="toggle-all" type="checkbox" @change="allDone(this.checked);">
+        <ul class="todo-list">
+          filters().forEach(function (todo) {
+          <li :bind="todo" class="todo"
+            :class="{completed: todo.completed, editing: todo == editedTodo}"
+            @update="updateInfo()" @create="updateInfo()" @destroy="updateInfo()">
+            <div class="view">
+              <input class="toggle" type="checkbox" :checked="todo.completed" @change="todo.completed = this.checked">
+              <label @dblclick="editTodo(todo)">#{todo.title}</label>
+              <button class="destroy" @click="removeTodo(todo)"></button>
+            </div>
+            <input class="edit" type="text"
+              :value="todo.title"
+              @focusout="doneEdit(todo, this.value)"
+              @keyup.enter="doneEdit(todo, this.value)"
+              @keyup.esc="cancelEdit(todo)">
+          </li>
+          });
+        </ul>
+      </section>
+      <footer :bind="info" class="footer">
+        if (info.count <= 0) {
+          return;
+        }
+        <span class="todo-count">
+					<strong>#{info.remaining}</strong> left #{info.remaining === 1 ? 'item' : 'items'}
+				</span>
+        <ul class="filters">
+          <li><a href="#/all" :class="{selected: visibility == 'all'}">All</a></li>
+          <li><a href="#/active" :class="{selected: visibility == 'active'}">Active</a></li>
+          <li><a href="#/completed" :class="{selected: visibility == 'completed'}">Completed</a></li>
+        </ul>
+        if (info.count > info.remaining) {
+        <button class="clear-completed" @click="removeCompleted()">
+					Clear completed
+				</button>
+        }
+      </footer>
+    </script>
+  </section>
+  <footer class="info">
+    <p>Double-click to edit a todo</p>
+    <p>Written by <a href="http://evanyou.me">Evan You</a></p>
+    <p>Part of <a href="http://todomvc.com">TodoMVC</a></p>
+  </footer>
+  <script src="node_modules/todomvc-common/base.js"></script>
+  <script src="node_modules/director/build/director.js"></script>
+  <!--<script src="node_modules/h5page/h5page.js"></script>-->
+  <script src="../../h5page.js"></script>
+  <script src="js/app.js"></script>
+</body>
+
+</html>

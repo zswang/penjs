@@ -89,7 +89,7 @@
       options.init.call(options.data, binder);
     }
 
-    ['click', 'dblclick', 'keydown', 'keyup', 'focusin', 'focusout'].forEach(function (eventName) {
+    ['click', 'dblclick', 'keydown', 'keyup', 'focusin', 'focusout', 'change'].forEach(function (eventName) {
       parentElement.addEventListener(eventName, function (e) {
         if (e.target.getAttribute(binder._eventAttributePrefix + 'input')) {
           if (eventName === 'focusin') {
@@ -115,6 +115,23 @@
       binder.triggerScopeEvent({ type: 'tap', target: element });
     });
 
+    function keyChecker(event, trigger) {
+      return ({
+        esc: [27],
+        tab: [9],
+        enter: [13],
+        space: [32],
+        up: [38],
+        left: [37],
+        right: [39],
+        down: [40],
+        delete: [8, 46],
+      }[trigger] || []).indexOf(event.keyCode) >= 0;
+    }
+
+    binder.registerChecker('keyup', keyChecker);
+    binder.registerChecker('keydown', keyChecker);
+
     binder.registerCompiler('jhtmls', function (templateCode, bindObjectName) {
       var code = Parser.build(Parser.parse(templateCode), bindObjectName, compiler_jhtmls);
       return jhtmls_render(code);
@@ -126,7 +143,7 @@
       parentElement.innerHTML = templateRender(options.data || {});
     }
     binder.$$scope.element = parentElement;
-
+    return options.data;
   };
 
   exports.Parser = Parser;

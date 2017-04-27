@@ -60,7 +60,7 @@ function parser_tokenizer(code) {
         // find attrs
         while (true) {
             // find attrName
-            match = code.slice(scanpos + offset).match(/^\s*([:@]?[\w_]+[\w_-]*[\w_]|[\w_]+)\s*/);
+            match = code.slice(scanpos + offset).match(/^\s*([:@]?[\w_]+[\w_\-.]*[\w_]|[\w_]+)\s*/);
             if (!match) {
                 break;
             }
@@ -751,6 +751,32 @@ var guid = 0;
   console.log(JSON.stringify(element));
   // > {"innerHTML":"<div></div>"}
   ```
+ * @example bind():attr is null
+  ```html
+  <div>
+    <script type="text/jhtmls">
+    <input type="checkbox" :checked="checked">
+    </script>
+  </div>
+  ```
+  ```js
+  var binder = new jnodes.Binder();
+  var data = { checked: false };
+  var div = document.querySelector('div');
+  jnodes.binder.registerCompiler('jhtmls', function (templateCode, bindObjectName) {
+    var node = jnodes.Parser.parse(templateCode);
+    var code = jnodes.Parser.build(node, bindObjectName, compiler_jhtmls);
+    return jhtmls.render(code);
+  });
+  div.innerHTML = jnodes.binder.templateCompiler('jhtmls', div.querySelector('script').innerHTML)(data);
+  var rootScope = jnodes.binder.$$scope;
+  rootScope.element = div;
+  console.log(div.innerHTML.trim());
+  // > <input type="checkbox">
+  data.checked = true;
+  console.log(div.innerHTML.trim());
+  // > <input checked="" type="checkbox">
+  ```
    */
 var Binder = (function () {
     function Binder(options) {
@@ -765,6 +791,7 @@ var Binder = (function () {
         this._imports = options.imports;
         this._templates = {};
         this._compiler = {};
+        this._checkers = {};
         this._findElement = options.findElement || (function (scope) {
             return document.querySelector("[" + _this._scopeAttributeName + "=\"" + scope.id + "\"]");
         });
@@ -798,6 +825,7 @@ var Binder = (function () {
                 }
             }
             _this.lifecycleEvent(scope, 'create');
+            _this.lifecycleEvent(scope, 'update');
         });
         this._attrsRender = options.attrsRender || (function (scope, attrs) {
             if (!attrs) {
@@ -810,23 +838,27 @@ var Binder = (function () {
                     return true;
                 }
                 var name = attr.name.slice(1);
-                var values = [];
                 if (name === _this._bindAttributeName) {
                     name = _this._scopeAttributeName;
-                    values.push(scope.id);
                 }
-                else if (_this._eventAttributePrefix && '@' === attr.name[0]) {
+                else if ('@' === attr.name[0]) {
+                    var arr = name.split('.');
+                    name = arr[0];
                     if (name === 'create') {
                         scope.lifecycleCreate = true;
                     }
                     else if (name === 'destroy') {
                         scope.lifecycleDestroy = true;
                     }
+                    else if (name === 'update') {
+                        scope.lifecycleUpdate = true;
+                    }
                     name = _this._eventAttributePrefix + name;
                 }
-                dictValues[name] = values;
+                var values = dictValues[name] = dictValues[name] || [];
                 dictQuoteds[name] = attr.quoted;
                 if (name === _this._scopeAttributeName) {
+                    values.push(scope.id);
                     return;
                 }
                 if (attr.value === '' || attr.value === null || attr.value === undefined ||
@@ -863,9 +895,12 @@ var Binder = (function () {
             return Object.keys(dictValues).map(function (name) {
                 var values = dictValues[name];
                 if (values.length <= 0) {
-                    return name;
+                    return null;
                 }
                 var quoted = dictQuoteds[name] || '';
+                if (values.length === 1 && values[0] === true) {
+                    return "" + name;
+                }
                 return name + "=" + quoted + values.join(' ') + quoted;
             }).join(' ');
         });
@@ -879,6 +914,16 @@ var Binder = (function () {
             return;
         }
         return render(scope);
+    };
+    Binder.prototype.registerChecker = function (eventType, checker) {
+        this._checkers[eventType] = checker;
+    };
+    Binder.prototype.eventChecker = function (event, trigger) {
+        var checker = this._checkers[event.type];
+        if (!checker) {
+            return;
+        }
+        return checker(event, trigger);
     };
     Binder.prototype.templateCompiler = function (templateType, templateCode) {
         var compiler = this._compiler[templateType];
@@ -919,8 +964,13 @@ var Binder = (function () {
      */
     Binder.prototype.lifecycleEvent = function (scope, type) {
         var _this = this;
-        var parent = this.element(scope);
         function hasLifecycle(scope) {
+            if (type === 'update') {
+                if (scope.lifecycleUpdate) {
+                    return true;
+                }
+                return;
+            }
             if ((type === 'create' && scope.lifecycleCreate) || (type === 'destroy' && scope.lifecycleDestroy)) {
                 return true;
             }
@@ -929,11 +979,17 @@ var Binder = (function () {
             }
         }
         if (hasLifecycle(scope)) {
-            var elements = [].slice.apply(parent.querySelectorAll("[" + this._eventAttributePrefix + type + "]"));
-            elements.forEach(function (item) {
-                _this.triggerScopeEvent({ type: type }, item);
-                item.removeAttribute("" + _this._eventAttributePrefix + type);
-            });
+            var parent_1 = this.element(scope);
+            if (type === 'update') {
+                this.triggerScopeEvent({ type: type, target: parent_1 });
+            }
+            else {
+                var elements = [].slice.apply(parent_1.querySelectorAll("[" + this._eventAttributePrefix + type + "]"));
+                elements.forEach(function (item) {
+                    _this.triggerScopeEvent({ type: type, target: item });
+                    item.removeAttribute("" + _this._eventAttributePrefix + type);
+                });
+            }
         }
     };
     /**
@@ -1084,14 +1140,18 @@ var Binder = (function () {
         }
         var cmd = target.getAttribute(this._eventAttributePrefix + event.type);
         if (cmd && cmd[0] === '@') {
-            var scope = this.scope(target);
-            if (!scope) {
+            var scope_1 = this.scope(target);
+            if (!scope_1) {
                 return;
             }
-            var method = (scope.methods || {})[cmd];
-            if (method) {
-                method.call(target, event);
-            }
+            // forEach @1 @2 ...
+            cmd.replace(/@\w+/g, function (all) {
+                var method = (scope_1.methods || {})[all];
+                if (method) {
+                    method.call(target, event);
+                }
+                return '';
+            });
         }
     };
     return Binder;
@@ -1124,11 +1184,12 @@ var Binder = (function () {
   console.log(JSON.stringify(node));
   // > {"tag":":template","attrs":[{"name":"class","value":"book"}]}
   ```
- * @example compiler_jhtmls:base3
+ * @example compiler_jhtmls:base keyup.enter
   ```html
   <div>
     <script type="text/jhtmls">
-    <div><button @click="pos.x++">plus x</button></div>
+    <input type="text" @keyup.enter="pos.x = parseInt(this.value)" value="-1">
+    <div><button :bind="pos" @click="pos.x++" @update.none="console.info('none')">plus #{pos.x}</button></div>
     </script>
   </div>
   ```
@@ -1140,6 +1201,7 @@ var Binder = (function () {
     }
   };
   var div = document.querySelector('div');
+  var binder = jnodes.binder = new jnodes.Binder();
   jnodes.binder.registerCompiler('jhtmls', function (templateCode, bindObjectName) {
     var node = jnodes.Parser.parse(templateCode);
     var code = jnodes.Parser.build(node, bindObjectName, compiler_jhtmls);
@@ -1148,6 +1210,37 @@ var Binder = (function () {
   div.innerHTML = jnodes.binder.templateCompiler('jhtmls', div.querySelector('script').innerHTML)(data);
   var rootScope = jnodes.binder.$$scope;
   rootScope.element = div;
+  function keyChecker(event, trigger) {
+    switch (trigger) {
+      case 'enter':
+        return event.keyCode === 13;
+      case 'esc':
+        return event.keyCode === 27;
+    }
+  }
+  binder.registerChecker('keyup', keyChecker);
+  function findEventTarget(parent, target, selector) {
+    var elements = [].slice.call(parent.querySelectorAll(selector));
+    while (target && elements.indexOf(target) < 0) {
+      target = target.parentNode;
+    }
+    return target;
+  }
+  ['keydown', 'keyup'].forEach(function (eventName) {
+    div.addEventListener(eventName, function (e) {
+      var target = findEventTarget(div, e.target, '[' + binder._eventAttributePrefix + eventName + ']');
+      if (!target) {
+        return;
+      }
+      binder.triggerScopeEvent(e, target);
+    })
+  })
+  var e = document.createEvent('HTMLEvents');
+  e.initEvent('keyup', true, false);
+  e.keyCode = 13;
+  document.querySelector('input').dispatchEvent(e);
+  console.log(document.querySelector('button').innerHTML.trim());
+  // > plus -1
   ```
  */
 function compiler_jhtmls(node, bindObjectName) {
@@ -1186,7 +1279,14 @@ function compiler_jhtmls(node, bindObjectName) {
             value = attr.value;
         }
         else if (attr.name[0] === '@') {
-            value = "function (event) { with (" + bindObjectName + "._imports || {}) { " + attr.value + " }}";
+            var arr = attr.name.split('.');
+            var trigger = arr[1];
+            if (trigger) {
+                value = "function (event) { if (" + bindObjectName + ".eventChecker(event, " + JSON.stringify(trigger) + ")) { with (" + bindObjectName + "._imports || {}) { " + attr.value + " }}}";
+            }
+            else {
+                value = "function (event) { with (" + bindObjectName + "._imports || {}) { " + attr.value + " }}";
+            }
             hasOverwriteAttr = true;
         }
         else {
@@ -1290,6 +1390,31 @@ function compiler_jhtmls(node, bindObjectName) {
     console.log(jhtmls.isOutput('hello'));
     // > true
     ```
+   * @example isOutput():No semicolon "foo()"
+    ```js
+    console.log(jhtmls.isOutput('foo()'));
+    // > false
+    ```
+   * @example isOutput():Not symbol "return !todo.completed"
+    ```js
+    console.log(jhtmls.isOutput('return !todo.completed'));
+    // > false
+    ```
+   * @example isOutput():Strings Template "`${name}`"
+    ```js
+    console.log(jhtmls.isOutput('`${name}`'));
+    // > false
+    ```
+   * @example isOutput():Strings Template "\`\`\`js"
+    ```js
+    console.log(jhtmls.isOutput('\`\`\`js'));
+    // > true
+    ```
+   * @example isOutput():Url "http://jhtmls.com/"
+    ```js
+    console.log(jhtmls.isOutput('http://jhtmls.com/'));
+    // > true
+    ```
    '''</example>'''
    */
   function jhtmls_isOutput(line) {
@@ -1305,12 +1430,16 @@ function compiler_jhtmls(node, bindObjectName) {
     }
     // 非 JavaScript 字符开头
     // 示例：#、<div>、汉字
-    if (/^[ \w\t_$]*([^&\^?|\n\w\/'"{}\[\]+\-():;, \t=\.$_]|:\/\/).*$/.test(line)) {
+    if (/^[ \w\t_$]*([^&\^?|\n\w\/'"{}\[\]+\-():;,!` \t=\.$_]|:\/\/).*$/.test(line)) {
+      return true;
+    }
+    // ```
+    if (/^\s*[`\-+'"]{3,}/.test(line)) {
       return true;
     }
     // 不是 else 等单行语句
     // 示例：hello world
-    if (/^(?!\s*(else|do|try|finally|void|typeof\s[\w$_]*)\s*$)[^'":;{}()\[\],\n|=&\/^?]+$/.test(line)) {
+    if (/^(?!\s*(else|do|try|finally|void|typeof\s[\w$_]*)\s*$)[^'"`!:;{}()\[\],\n|=&\/^?]+$/.test(line)) {
       return true;
     }
     return false;
@@ -1811,7 +1940,7 @@ function compiler_jhtmls(node, bindObjectName) {
     if (typeof options.init === 'function') {
       options.init.call(options.data, binder);
     }
-    ['click', 'dblclick', 'keydown', 'keyup', 'focusin', 'focusout'].forEach(function (eventName) {
+    ['click', 'dblclick', 'keydown', 'keyup', 'focusin', 'focusout', 'change'].forEach(function (eventName) {
       parentElement.addEventListener(eventName, function (e) {
         if (e.target.getAttribute(binder._eventAttributePrefix + 'input')) {
           if (eventName === 'focusin') {
@@ -1834,6 +1963,21 @@ function compiler_jhtmls(node, bindObjectName) {
     h5tap(parentElement, '[' + binder._eventAttributePrefix + 'tap]', function (element, e) {
       binder.triggerScopeEvent({ type: 'tap', target: element });
     });
+    function keyChecker(event, trigger) {
+      return ({
+        esc: [27],
+        tab: [9],
+        enter: [13],
+        space: [32],
+        up: [38],
+        left: [37],
+        right: [39],
+        down: [40],
+        delete: [8, 46],
+      }[trigger] || []).indexOf(event.keyCode) >= 0;
+    }
+    binder.registerChecker('keyup', keyChecker);
+    binder.registerChecker('keydown', keyChecker);
     binder.registerCompiler('jhtmls', function (templateCode, bindObjectName) {
       var code = Parser.build(Parser.parse(templateCode), bindObjectName, compiler_jhtmls);
       return jhtmls_render(code);
@@ -1844,6 +1988,7 @@ function compiler_jhtmls(node, bindObjectName) {
       parentElement.innerHTML = templateRender(options.data || {});
     }
     binder.$$scope.element = parentElement;
+    return options.data;
   };
   exports.Parser = Parser;
   /*<function name="h5ajax_send">*/
