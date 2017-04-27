@@ -56,13 +56,13 @@ gulp.task('reload', function() {
 })
 
 gulp.task('build', function() {
-  gulp.src('./src/h5page.js')
+  gulp.src('./src/penjs.js')
     .pipe(jdists({
       trigger: 'release'
     }))
     .pipe(gulp.dest('./'))
     .pipe(uglify())
-    .pipe(rename('h5page.min.js'))
+    .pipe(rename('penjs.min.js'))
     .pipe(gulp.dest('./'))
 })
 

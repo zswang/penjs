@@ -1,8 +1,8 @@
 {
-  "name": "h5page",
-  "version": "0.0.1",
+  "name": "penjs",
+  "version": "0.0.2",
   "description": "Mobile-side page small development framework.",
-  "main": "h5page.js",
+  "main": "penjs.js",
   "scripts": {
     "_update_version": "node version.js",
     "dist": "npm run _update_version && gulp dist example && npm run test",
@@ -13,16 +13,19 @@
     "mocha2": "mocha test/art.js",
     "test": "istanbul cover --hook-run-in-context node_modules/mocha/bin/_mocha -- -R spec"
   },
+  "keywords": [
+    "penjs"
+  ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zswang/h5page.git"
+    "url": "git+https://github.com/zswang/penjs.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/zswang/h5page/issues"
+    "url": "https://github.com/zswang/penjs/issues"
   },
-  "homepage": "https://github.com/zswang/h5page#readme",
+  "homepage": "https://github.com/zswang/penjs#readme",
   "devDependencies": {
     "ejs": "^2.5.6",
     "gulp": "^3.9.1",

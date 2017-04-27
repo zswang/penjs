@@ -1,7 +1,7 @@
-h5page
+penjs
 --------
 
-![logo](h5page.png)
+![logo](penjs.png)
 
 # [![NPM version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Coverage Status][coverage-image]][coverage-url]
 
@@ -48,9 +48,9 @@ Mobile-side page small development framework.
 
 MIT © [zswang](http://weibo.com/zswang)
 
-[npm-url]: https://npmjs.org/package/h5page
-[npm-image]: https://badge.fury.io/js/h5page.svg
-[travis-url]: https://travis-ci.org/zswang/h5page
-[travis-image]: https://travis-ci.org/zswang/h5page.svg?branch=master
-[coverage-url]: https://coveralls.io/github/zswang/h5page?branch=master
-[coverage-image]: https://coveralls.io/repos/zswang/h5page/badge.svg?branch=master&service=github
+[npm-url]: https://npmjs.org/package/penjs
+[npm-image]: https://badge.fury.io/js/penjs.svg
+[travis-url]: https://travis-ci.org/zswang/penjs
+[travis-image]: https://travis-ci.org/zswang/penjs.svg?branch=master
+[coverage-url]: https://coveralls.io/github/zswang/penjs?branch=master
+[coverage-image]: https://coveralls.io/repos/zswang/penjs/badge.svg?branch=master&service=github

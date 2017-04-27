@@ -3,7 +3,7 @@
     uid: 0
   };
 
-  var pm = h5page('.todoapp', {
+  var pm = penjs('.todoapp', {
     data: {
       todos: [],
       editedTodo: null,

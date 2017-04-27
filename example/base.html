@@ -2,13 +2,13 @@
 <html>
 
 <head>
-  <title>h5page example</title>
+  <title>penjs example</title>
   <script src="../node_modules/jnodes/jnodes.js"></script>
   <script src="../node_modules/jhtmls/jhtmls.js"></script>
   <script src="../node_modules/h5tap/h5tap.js"></script>
   <script src="../node_modules/h5ajax/h5ajax.js"></script>
   <script src="../node_modules/mockjs/dist/mock.js"></script>
-  <script src="../h5page.js"></script>
+  <script src="../penjs.js"></script>
 </head>
 
 <body>
@@ -103,7 +103,7 @@
     },
     init: function (binder) {
       binder.registerCompiler('ejs', function (templateCode, bindObjectName) {
-        var code = h5page.Parser.build(h5page.Parser.parse(templateCode), bindObjectName, compiler_ejs);
+        var code = penjs.Parser.build(penjs.Parser.parse(templateCode), bindObjectName, compiler_ejs);
         return ejs.compile(code);
       });
     },
@@ -114,7 +114,7 @@
       ajax: function () {
         var url = '/movie/title';
         var self = this;
-        h5page.Ajax.get(url, function (err, reply) {
+        penjs.Ajax.get(url, function (err, reply) {
           if (err) {
             return;
           }
@@ -137,9 +137,9 @@
       }
     },
   };
-  h5page('#app_plus');
-  h5page('#app_ejs', options);
-  h5page('#app', options);
+  penjs('#app_plus');
+  penjs('#app_ejs', options);
+  penjs('#app', options);
 
 </script>
 

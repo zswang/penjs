@@ -1876,7 +1876,7 @@ function compiler_jhtmls(node, bindObjectName) {
     });
   }
   /*</function>*/
-  var h5page_guid = 0;
+  var penjs_guid = 0;
   var exports = function (element, options) {
     options = options || {};
     options.data = options.data || {};
@@ -1932,9 +1932,9 @@ function compiler_jhtmls(node, bindObjectName) {
       });
       return result;
     }
-    var binderName = 'binder' + (h5page_guid++).toString(36);
-    var binder = h5page[binderName] = new Binder({
-      bindObjectName: 'h5page.' + binderName,
+    var binderName = 'binder' + (penjs_guid++).toString(36);
+    var binder = penjs[binderName] = new Binder({
+      bindObjectName: 'penjs.' + binderName,
       imports: methodsBind(options.methods, options.data),
     });
     if (typeof options.init === 'function') {
@@ -2121,4 +2121,4 @@ function compiler_jhtmls(node, bindObjectName) {
   } else {
     window[exportName] = exports;
   }
-})('h5page');
+})('penjs');
