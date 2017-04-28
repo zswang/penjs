@@ -556,7 +556,7 @@ var Parser = {
     build: parser_build,
 }; /*</function>*/
 /*<function name="Binder" depend="observer">*/
-var guid = 0;
+var jnodes_guid = 0;
 /**
  * @example bind():base
   ```js
@@ -594,7 +594,9 @@ var guid = 0;
   var scope = {
     children: [{
       model: {
-        $$binds: []
+        $$binds: function () {
+          return [];
+        }
       }
     }]
   };
@@ -605,6 +607,92 @@ var guid = 0;
     }]
   };
   jnodes.binder.cleanChildren(scope);
+  jnodes.binder.update();
+  var scope = {
+    type: 'depend',
+    binder: jnodes.binder,
+    parent: {
+      type: 'bind',
+      binder: jnodes.binder,
+      model: {}
+    }
+  };
+  var data = { x: 1 };
+  jnodes.binder.observer(data, scope);
+  data.x = 2;
+  var scope = {
+    type: 'depend',
+    binder: jnodes.binder,
+    parent: {
+      type: 'depend',
+      binder: jnodes.binder,
+      model: {
+        $$binds: function () {
+          return [{
+            id: 0,
+            type: 'bind',
+            binder: jnodes.binder,
+            model: {},
+          }, {
+            id: 0,
+            type: 'depend',
+            binder: jnodes.binder,
+            model: {},
+            parent: {
+              binder: jnodes.binder,
+              model: {},
+            }
+          }]
+        },
+      },
+    },
+  };
+  var data = { x: 1 };
+  jnodes.binder.observer(data, scope);
+  data.x = 2;
+  var $$binds = function() {
+    return [{
+      id: 0,
+      type: 'bind',
+      binder: jnodes.binder,
+      model: {},
+    }]
+  };
+  var parent = {
+    id: 0,
+    type: 'depend',
+    binder: jnodes.binder,
+    model: {},
+    parent: {
+      id: 0,
+      type: 'bind',
+      binder: jnodes.binder,
+      model: {
+        $$binds: $$binds
+      },
+    }
+  };
+  var scope = {
+    type: 'depend',
+    binder: jnodes.binder,
+    parent: {
+      type: 'depend',
+      binder: jnodes.binder,
+      model: {
+        $$binds: function () {
+          return [{
+            id: 0,
+            type: 'bind',
+            binder: jnodes.binder,
+            model: {},
+          }, parent, parent]
+        }
+      },
+    },
+  };
+  var data = { x: 1 };
+  jnodes.binder.observer(data, scope);
+  data.x = 2;
   ```
  * @example bind():bind jhtmls
   ```html
@@ -879,7 +967,7 @@ var Binder = (function () {
                         });
                         break;
                     case 'function':
-                        var methodId = "@" + (guid++).toString(36);
+                        var methodId = "@" + (jnodes_guid++).toString(36);
                         scope.methods = scope.methods || {};
                         scope.methods[methodId] = attr.value;
                         values.push(methodId);
@@ -939,7 +1027,7 @@ var Binder = (function () {
         var _this = this;
         if (scope.children) {
             scope.children.forEach(function (item) {
-                var binds = item.model && item.model.$$binds;
+                var binds = item.model && item.model.$$binds && item.model.$$binds();
                 if (binds) {
                     // remove scope
                     var index = binds.indexOf(item);
@@ -1002,6 +1090,7 @@ var Binder = (function () {
     Binder.prototype.bind = function (model, parent, outerBindRender, innerBindRender) {
         var _this = this;
         var scope = {
+            type: 'bind',
             model: model,
             parent: parent,
             binder: this,
@@ -1030,29 +1119,76 @@ var Binder = (function () {
                 return innerBindRender(output, scope);
             };
         }
-        scope.id = (guid++).toString(36);
+        scope.id = (jnodes_guid++).toString(36);
         this._binds[scope.id] = scope;
+        this.observer(model, scope);
+        return scope;
+    };
+    Binder.prototype.observer = function (model, scope) {
+        var parent = scope.parent;
         if (parent) {
             parent.children = parent.children || [];
             parent.children.push(scope);
+        }
+        function pushParents(parents, scope) {
+            var parent = scope.parent;
+            if (parent.model.$$binds) {
+                parent.model.$$binds().forEach(function (bind) {
+                    if (bind.type !== 'depend') {
+                        if (parents.indexOf(bind) < 0) {
+                            parents.push(bind);
+                        }
+                    }
+                    else {
+                        pushParents(parents, bind);
+                    }
+                });
+            }
         }
         // 只绑定对象类型
         if (model && typeof model === 'object') {
             // 对象已经绑定过
             if (!model.$$binds) {
-                model.$$binds = [scope];
+                var binds_1 = [scope];
+                model.$$binds = function () {
+                    return binds_1;
+                };
                 observer(model, function () {
-                    model.$$binds.forEach(function (scope) {
-                        scope.binder.update(scope);
+                    var parents = [];
+                    model.$$binds().forEach(function (scope) {
+                        if (scope.type !== 'depend') {
+                            scope.binder.update(scope);
+                        }
+                        else {
+                            pushParents(parents, scope);
+                        }
+                    });
+                    parents.forEach(function (parent) {
+                        parent.binder.update(parent);
                     });
                 }, function (key) {
                     return key && key.slice(2) !== '$$';
                 });
             }
             else {
-                model.$$binds.push(scope);
+                model.$$binds().push(scope);
             }
         }
+    };
+    /**
+     * 声明依赖关系
+     *
+     * @param model 数据
+     * @param scope 被依赖的作用域
+     */
+    Binder.prototype.depend = function (model, parent) {
+        var scope = {
+            type: 'depend',
+            model: model,
+            parent: parent,
+            binder: this,
+        };
+        this.observer(model, scope);
         return scope;
     };
     /**
@@ -1068,6 +1204,9 @@ var Binder = (function () {
      * @param scope 作用域
      */
     Binder.prototype.update = function (scope) {
+        if (!scope) {
+            return;
+        }
         this._updateElement(this.element(scope), scope);
     };
     Binder.prototype.scope = function (id) {
@@ -1242,7 +1381,48 @@ var Binder = (function () {
   console.log(document.querySelector('button').innerHTML.trim());
   // > plus -1
   ```
- */
+ * @example compiler_jhtmls:base depend
+  ```html
+  <div>
+    <script type="text/jhtmls">
+    <div :bind="books">
+      <h4>#{books.filter(function (book) { return book.star; }).length}</h4>
+      <ul>
+      books.forEach(function (book) {
+        <li :depend="book">#{book.title}</li>
+      })
+      </ul>
+    </script>
+  </div>
+  ```
+  ```js
+  var data = {
+    books: [{
+      title: 'a',
+      star: false,
+    },{
+      title: 'b',
+      star: false,
+    }]
+  };
+  var div = document.querySelector('div');
+  var binder = jnodes.binder = new jnodes.Binder();
+  jnodes.binder.registerCompiler('jhtmls', function (templateCode, bindObjectName) {
+    var node = jnodes.Parser.parse(templateCode);
+    var code = jnodes.Parser.build(node, bindObjectName, compiler_jhtmls);
+    return jhtmls.render(code);
+  });
+  div.innerHTML = jnodes.binder.templateCompiler('jhtmls', div.querySelector('script').innerHTML)(data);
+  var rootScope = jnodes.binder.$$scope;
+  rootScope.element = div;
+  data.books[0].star = true;
+  console.log(div.querySelector('h4').innerHTML);
+  // > 1
+  data.books[1].star = true;
+  console.log(div.querySelector('h4').innerHTML);
+  // > 2
+  ```
+   */
 function compiler_jhtmls(node, bindObjectName) {
     var indent = node.indent || '';
     var inserFlag = "/***/ ";
@@ -1268,12 +1448,17 @@ function compiler_jhtmls(node, bindObjectName) {
     }
     var varintAttrs = "\n" + indent + inserFlag + "var _attrs_ = [\n";
     var hasOverwriteAttr;
-    var bindDataValue;
     node.attrs.forEach(function (attr) {
         var value;
         if (attr.name[0] === ':') {
             if (attr.name === ':bind') {
-                bindDataValue = attr.value;
+                node.beforebegin = "\n" + indent + inserFlag + bindObjectName + ".bind(" + attr.value + ", _scope_, function (_output_, _scope_, holdInner) {\n";
+                node.beforeend = "\n" + indent + inserFlag + "_scope_.innerRender = function(_output_) {\n";
+                node.afterbegin = "\n" + indent + inserFlag + "}; if (holdInner) { _scope_.innerRender(_output_); }\n";
+                node.afterend = "\n" + indent + inserFlag + "}).outerRender(_output_, true);\n";
+            }
+            else if (attr.name === ':depend') {
+                node.beforebegin = "\n" + indent + inserFlag + bindObjectName + ".depend(" + attr.value + ", _scope_);\n";
             }
             hasOverwriteAttr = true;
             value = attr.value;
@@ -1297,13 +1482,7 @@ function compiler_jhtmls(node, bindObjectName) {
     if (!hasOverwriteAttr) {
         return;
     }
-    node.beforebegin = '';
-    if (bindDataValue) {
-        node.beforebegin += "\n" + indent + inserFlag + bindObjectName + ".bind(" + bindDataValue + ", _scope_, function (_output_, _scope_, holdInner) {\n";
-        node.beforeend = "\n" + indent + inserFlag + "_scope_.innerRender = function(_output_) {\n";
-        node.afterbegin = "\n" + indent + inserFlag + "}; if (holdInner) { _scope_.innerRender(_output_); }\n";
-        node.afterend = "\n" + indent + inserFlag + "}).outerRender(_output_, true);\n";
-    }
+    node.beforebegin = node.beforebegin || '';
     varintAttrs += "" + indent + inserFlag + "];\n";
     node.beforebegin += varintAttrs;
     node.overwriteAttrs = "!#{" + bindObjectName + "._attrsRender(_scope_, _attrs_)}";

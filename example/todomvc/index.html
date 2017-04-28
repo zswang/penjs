@@ -51,21 +51,23 @@
           return;
         }
         <input class="toggle-all" type="checkbox" @change="allDone(this.checked);">
-        <ul class="todo-list">
+        <ul :bind="todos" class="todo-list" @update="updateInfo(); saveTodos();">
           filters().forEach(function (todo) {
-          <li :bind="todo" class="todo"
-            :class="{completed: todo.completed, editing: todo == editedTodo}"
-            @update="updateInfo()" @create="updateInfo()" @destroy="updateInfo()">
+          <li :depend="todo" class="todo"
+            :class="{completed: todo.completed, editing: todo == editedTodo}">
             <div class="view">
               <input class="toggle" type="checkbox" :checked="todo.completed" @change="todo.completed = this.checked">
               <label @dblclick="editTodo(todo)">#{todo.title}</label>
               <button class="destroy" @click="removeTodo(todo)"></button>
             </div>
+            if (todo == editedTodo) {
             <input class="edit" type="text"
               :value="todo.title"
+              @create="this.focus(); this.setSelectionRange(0, this.value.length)"
               @focusout="doneEdit(todo, this.value)"
               @keyup.enter="doneEdit(todo, this.value)"
               @keyup.esc="cancelEdit(todo)">
+            }
           </li>
           });
         </ul>

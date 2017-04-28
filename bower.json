@@ -1,7 +1,7 @@
 {
   "name": "penjs",
-  "description": "Mobile-side page small development framework.",
-  "version": "0.0.2",
+  "description": "Mobile-web small development framework.",
+  "version": "0.0.5",
   "author": "",
   "keywords": [
     "penjs"

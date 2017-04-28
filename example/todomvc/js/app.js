@@ -1,11 +1,22 @@
 (function () {
+  // localStorage persistence
+  var STORAGE_KEY = 'todos-penjs-0.0'
   var todoStorage = {
-    uid: 0
-  };
+    fetch: function () {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      } catch(ex) {
+        return [];
+      }
+    },
+    save: function (todos) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+    }
+  }
 
   var pm = penjs('.todoapp', {
     data: {
-      todos: [],
+      todos: todoStorage.fetch(),
       editedTodo: null,
       visibility: getVisibility(),
     },
@@ -51,7 +62,11 @@
         this.todos = this.todos.filter(function (todo) {
           return !todo.completed;
         });
-      }
+      },
+
+      saveTodos: function () {
+        todoStorage.save(this.todos);
+      },
 
     }
   });
