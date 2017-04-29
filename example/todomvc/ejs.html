@@ -1,0 +1,96 @@
+<!doctype html>
+<html data-framework="penjs">
+
+<head>
+  <meta charset="utf-8">
+  <title>penjs • TodoMVC</title>
+  <link rel="stylesheet" href="node_modules/todomvc-common/base.css">
+  <link rel="stylesheet" href="node_modules/todomvc-app-css/index.css">
+</head>
+
+<body>
+  <section class="todoapp">
+    <script type="text/esj">
+      <header class="header">
+        <h1>todos</h1>
+        <input class="new-todo" autofocus autocomplete="off" placeholder="What needs to be done?"
+          @keyup.enter="addTodo(this.value.trim()); this.value = '';">
+      </header>
+      <section class="main" :bind="todos" @update="saveTodos();">
+        <%
+        if (todos.length <= 0) {
+          return;
+        }
+        var allCompleted = todos.every(function (todo) {
+          return todo.completed;
+        });
+        %>
+        <input id="toggle-all" class="toggle-all" type="checkbox"
+          :checked="allCompleted"
+          @change="allDone(this.checked);">
+        <label for="toggle-all">Mark all as complete</label>
+        <ul class="todo-list">
+          <%
+          todos.filter(function (todo) {
+            switch (visibility) {
+              case 'active':
+                return !todo.completed;
+              case 'completed':
+                return todo.completed;
+            }
+            return true;
+          }).forEach(function (todo) {
+          %>
+          <li :depend="todo" class="todo"
+            :class="{completed: todo.completed, editing: todo == editedTodo}">
+            <div class="view">
+              <input class="toggle" type="checkbox" :checked="todo.completed" @change="todo.completed = this.checked">
+              <label @dblclick="editTodo(todo)"><%= todo.title %></label>
+              <button class="destroy" @click="removeTodo(todo)"></button>
+            </div>
+            <% if (todo == editedTodo) { %>
+            <input class="edit" type="text"
+              :value="todo.title"
+              @create="this.focus(); this.setSelectionRange(0, this.value.length);"
+              @focusout="doneEdit(todo, this.value);"
+              @keyup.enter="doneEdit(todo, this.value);"
+              @keyup.esc="cancelEdit(todo);">
+            <% } %>
+          </li>
+          <% }); %>
+        </ul>
+      </section>
+      <footer :bind="todos" class="footer">
+        <%
+        var remaining = todos.filter(function (todo) {
+          return todo.completed;
+        }).length;
+        %>
+        <span class="todo-count">
+					<strong><%= remaining %></strong> left <%= remaining === 1 ? 'item' : 'items' %>
+				</span>
+        <ul class="filters">
+          <li><a href="#/all" :class="{selected: visibility == 'all'}">All</a></li>
+          <li><a href="#/active" :class="{selected: visibility == 'active'}">Active</a></li>
+          <li><a href="#/completed" :class="{selected: visibility == 'completed'}">Completed</a></li>
+        </ul>
+        <% if (todos.length > remaining) { %>
+        <button class="clear-completed" @click="removeCompleted()">
+					Clear completed
+				</button>
+        <% } %>
+      </footer>
+    </script>
+  </section>
+  <footer class="info">
+    <p>Double-click to edit a todo</p>
+    <p>Written by <a href="http://evanyou.me">Evan You</a></p>
+    <p>Part of <a href="http://todomvc.com">TodoMVC</a></p>
+  </footer>
+  <script src="node_modules/todomvc-common/base.js"></script>
+  <script src="node_modules/ejs/ejs.js"></script>
+  <script src="node_modules/penjs/penjs.js"></script>
+  <script src="js/app.js"></script>
+</body>
+
+</html>

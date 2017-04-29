@@ -36,6 +36,9 @@ describe("src/penjs.js", function () {
           
   it("penjs:base", function () {
     examplejs_printLines = [];
+    global_ejs = global.ejs;
+    global.ejs = null;
+
     penjs('div', {
       data: {
         items: [{
@@ -65,6 +68,8 @@ describe("src/penjs.js", function () {
     penjs('header');
     penjs('footer script');
     penjs('section');
+
+    global.ejs = global_ejs;
   });
           
   it("jsdom@penjs:options is undefined", function (done) {
@@ -210,10 +215,8 @@ describe("src/penjs.js", function () {
         title: 'success'
       },
       init: function (binder) {
-        binder.registerCompiler('ejs', function (templateCode, bindObjectName) {
-          var code = penjs.Parser.build(penjs.Parser.parse(templateCode), bindObjectName, compiler_ejs);
-          return ejs.compile(code);
-        });
+        examplejs_print(binder._bindObjectName.slice(0, 5));
+        assert.equal(examplejs_printLines.join("\n"), "penjs"); examplejs_printLines = [];
       }
     });
     var div = document.querySelector('div');

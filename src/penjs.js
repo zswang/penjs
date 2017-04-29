@@ -9,6 +9,9 @@
   /*<jdists encoding="fndep" import="../node_modules/jnodes/src/js/Compiler/jhtmls.js" depend="compiler_jhtmls">*/
   var compiler_jhtmls = require('../node_modules/jnodes/src/js/Compiler/jhtmls.js').compiler_jhtmls;
   /*</jdists>*/
+  /*<jdists encoding="fndep" import="../node_modules/jnodes/src/js/Compiler/ejs.js" depend="compiler_ejs">*/
+  var compiler_ejs = require('../node_modules/jnodes/src/js/Compiler/ejs.js').compiler_ejs;
+  /*</jdists>*/
 
   /*<jdists encoding="fndep" import="../node_modules/jhtmls/jhtmls.js" depend="jhtmls_render">*/
   var jhtmls_render = require('../node_modules/jhtmls/jhtmls.js').render;
@@ -47,6 +50,9 @@
     </footer>
     ```
     ```js
+    global_ejs = global.ejs;
+    global.ejs = null;
+
     penjs('div', {
       data: {
         items: [{
@@ -76,6 +82,8 @@
     penjs('header');
     penjs('footer script');
     penjs('section');
+
+    global.ejs = global_ejs;
     ```
    * @example penjs:options is undefined
     ```html
@@ -180,10 +188,8 @@
         title: 'success'
       },
       init: function (binder) {
-        binder.registerCompiler('ejs', function (templateCode, bindObjectName) {
-          var code = penjs.Parser.build(penjs.Parser.parse(templateCode), bindObjectName, compiler_ejs);
-          return ejs.compile(code);
-        });
+        console.log(binder._bindObjectName.slice(0, 5));
+        // > penjs
       }
     });
     var div = document.querySelector('div');
@@ -323,6 +329,14 @@
       var code = Parser.build(Parser.parse(templateCode), bindObjectName, compiler_jhtmls);
       return jhtmls_render(code);
     });
+
+    if (typeof ejs !== 'undefined' && ejs) {
+      binder.registerCompiler('ejs', function (templateCode, bindObjectName) {
+        var code = Parser.build(Parser.parse(templateCode), bindObjectName, compiler_ejs);
+        return ejs.compile(code);
+      });
+    }
+
     var templateType = match[1];
     var templateRender = binder.templateCompiler(templateType, scriptElement.innerHTML);
 
