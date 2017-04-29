@@ -29,6 +29,10 @@ build/Release
 # see https://npmjs.org/doc/faq.html#Should-I-check-my-node_modules-folder-into-git
 node_modules
 
+!example/todomvc/node_modules/penjs/penjs.js
+!example/todomvc/node_modules/todomvc-app-css/index.css
+!example/todomvc/node_modules/todomvc-app-css/index.css
+
 # Bower
 coverage
 bower_components
