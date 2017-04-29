@@ -1,6 +1,6 @@
 {
   "name": "penjs",
-  "version": "0.0.5",
+  "version": "0.0.40",
   "description": "Mobile-web small development framework.",
   "main": "penjs.js",
   "scripts": {
@@ -10,7 +10,7 @@
     "example": "gulp example",
     "debug": "gulp",
     "mocha": "gulp example && npm run test",
-    "mocha2": "mocha test/art.js",
+    "mocha2": "mocha test/penjs.js",
     "test": "istanbul cover --hook-run-in-context node_modules/mocha/bin/_mocha -- -R spec"
   },
   "keywords": [
@@ -39,7 +39,7 @@
     "h5ajax": "^0.0.5",
     "h5tap": "^0.0.4",
     "jhtmls": "^1.1.11",
-    "jnodes": "^0.3.6",
+    "jnodes": "^0.3.12",
     "mockjs": "^1.0.1-beta3",
     "jsdom": "^9.12.0",
     "jshint": "^2.9.4",

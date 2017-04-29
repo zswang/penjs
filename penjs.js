@@ -650,13 +650,14 @@ var jnodes_guid = 0;
   var data = { x: 1 };
   jnodes.binder.observer(data, scope);
   data.x = 2;
+  var $$scope = {
+    id: 0,
+    type: 'bind',
+    binder: jnodes.binder,
+    model: {},
+  };
   var $$binds = function() {
-    return [{
-      id: 0,
-      type: 'bind',
-      binder: jnodes.binder,
-      model: {},
-    }]
+    return [$$scope]
   };
   var parent = {
     id: 0,
@@ -874,6 +875,7 @@ var Binder = (function () {
         this._templates = {};
         this._bindObjectName = options.bindObjectName || 'jnodes.binder';
         this._bindAttributeName = options.bindAttributeName || 'bind';
+        this._dependAttributeName = options.dependAttributeName || 'depend';
         this._scopeAttributeName = options.scopeAttributeName || "data-jnodes-scope";
         this._eventAttributePrefix = options.eventAttributePrefix || "data-jnodes-event-";
         this._imports = options.imports;
@@ -926,7 +928,7 @@ var Binder = (function () {
                     return true;
                 }
                 var name = attr.name.slice(1);
-                if (name === _this._bindAttributeName) {
+                if (name === _this._bindAttributeName || name === _this._dependAttributeName) {
                     name = _this._scopeAttributeName;
                 }
                 else if ('@' === attr.name[0]) {
@@ -1181,14 +1183,19 @@ var Binder = (function () {
      * @param model 数据
      * @param scope 被依赖的作用域
      */
-    Binder.prototype.depend = function (model, parent) {
+    Binder.prototype.depend = function (model, parent, outerBindRender) {
         var scope = {
             type: 'depend',
             model: model,
             parent: parent,
             binder: this,
+            outerRender: function (output) {
+                return outerBindRender(output, scope, true);
+            },
         };
         this.observer(model, scope);
+        scope.id = (jnodes_guid++).toString(36);
+        this._binds[scope.id] = scope;
         return scope;
     };
     /**
@@ -1458,7 +1465,8 @@ function compiler_jhtmls(node, bindObjectName) {
                 node.afterend = "\n" + indent + inserFlag + "}).outerRender(_output_, true);\n";
             }
             else if (attr.name === ':depend') {
-                node.beforebegin = "\n" + indent + inserFlag + bindObjectName + ".depend(" + attr.value + ", _scope_);\n";
+                node.beforebegin = "\n" + indent + inserFlag + bindObjectName + ".depend(" + attr.value + ", _scope_, function (_output_, _scope_) {\n";
+                node.afterend = "\n" + indent + inserFlag + "}).outerRender(_output_);\n";
             }
             hasOverwriteAttr = true;
             value = attr.value;
@@ -2056,6 +2064,183 @@ function compiler_jhtmls(node, bindObjectName) {
   }
   /*</function>*/
   var penjs_guid = 0;
+  /**
+   * 创建 penjs 对象
+   *
+   * @param {Element|String} element 绑定的元素
+   * @param {Object} options 配置项
+   * @param {Object} options.data 数据
+   * @param {Object} options.methods 方法
+   * @example penjs:base
+    ```html
+    <header></header>
+    <div>
+      <script type="text/jhtmls">
+      <ul>
+        items.forEach(function (item) {
+          <li :bind="item" :class="{selected: item.selected}" @click="item.selected = !item.selected">#{item.title}</li>
+        });
+      </ul>
+      </script>
+    </div>
+    <section>
+      <script type="text/ejs"></script>
+    </section>
+    <footer>
+      <script></script>
+    </footer>
+    ```
+    ```js
+    penjs('div', {
+      data: {
+        items: [{
+          title: 'a',
+          selected: false,
+        }, {
+          title: 'b',
+          selected: false,
+        }]
+      }
+    });
+    var div = document.querySelector('div');
+    var li = div.querySelector('li');
+    console.log(li.innerHTML.trim());
+    // > a
+    console.log(JSON.stringify(li.className));
+    // > ""
+    li.click();
+    li = div.querySelector('li');
+    console.log(JSON.stringify(li.className));
+    // > "selected"
+    penjs(div);
+    penjs('none');
+    penjs('header');
+    penjs('footer script');
+    penjs('section');
+    ```
+   * @example penjs:options is undefined
+    ```html
+    <div>
+      <script type="text/jhtmls">
+      var info = { title: 'example' };
+      <div @click="info.title = 'success';">
+        <h1 :bind="info">#{info.title}</h1>
+      </div>
+      </script>
+    </div>
+    ```
+    ```js
+    var pm = penjs('div');
+    var div = document.querySelector('div');
+    document.querySelector('h1').click();
+    console.log(document.querySelector('h1').innerHTML.trim());
+    // > success
+    ```
+   * @example penjs:methods
+    ```html
+    <div>
+      <script type="text/jhtmls">
+      var info = { title: 'example' };
+      <div @click="change(info, title);">
+        <h1 :bind="info">#{info.title}</h1>
+      </div>
+      </script>
+    </div>
+    ```
+    ```js
+    var pm = penjs('div', {
+      methods: {
+        change: function(info, title) {
+          info.title = title;
+        },
+        title: 'success'
+      }
+    });
+    var div = document.querySelector('div');
+    document.querySelector('h1').click();
+    console.log(document.querySelector('h1').innerHTML.trim());
+    // > success
+    ```
+   * @example penjs:input
+    ```html
+    <div>
+      <script type="text/jhtmls">
+      var info = { title: '' };
+      <input type="text" value="input"
+        @input="info.title = this.value;"
+        @keyup.esc="this.value = '';"
+        @keyup.none="info.none = 0;"
+      >
+      <span :bind="info">#{info.title}</span>
+      </script>
+    </div>
+    ```
+    ```js
+    var pm = penjs('div');
+    var div = document.querySelector('div');
+    var e = document.createEvent('HTMLEvents');
+    e.initEvent('focusin', true, false);
+    document.querySelector('input').dispatchEvent(e);
+    document.querySelector('input').value = 'success';
+    var e = document.createEvent('HTMLEvents');
+    e.initEvent('input', true, false);
+    document.querySelector('input').dispatchEvent(e);
+    console.log(document.querySelector('span').innerHTML.trim());
+    // > success
+    var e = document.createEvent('HTMLEvents');
+    e.initEvent('keyup', true, false);
+    e.keyCode = 27;
+    document.querySelector('input').dispatchEvent(e);
+    console.log(JSON.stringify(document.querySelector('input').value));
+    // > ""
+    var e = document.createEvent('HTMLEvents');
+    e.initEvent('focusout', true, false);
+    document.querySelector('input').dispatchEvent(e);
+    ```
+   * @example penjs:init & ejs & tap
+    ```html
+    <div>
+      <script type="text/ejs">
+      <% var info = { title: 'example' }; %>
+      <div @tap="change(info, title);">
+        <h1 :bind="info"><%= info.title %></h1>
+      </div>
+      </script>
+    </div>
+    ```
+    ```js
+    var pm = penjs('div', {
+      methods: {
+        change: function(info, title) {
+          info.title = title;
+        },
+        title: 'success'
+      },
+      init: function (binder) {
+        binder.registerCompiler('ejs', function (templateCode, bindObjectName) {
+          var code = penjs.Parser.build(penjs.Parser.parse(templateCode), bindObjectName, compiler_ejs);
+          return ejs.compile(code);
+        });
+      }
+    });
+    var div = document.querySelector('div');
+    var target = document.querySelector('h1');
+    // ------ touchstart ------
+    var e = document.createEvent('UIEvent');
+    var point = [100, 100];
+    e.touches = [{pageX: point[0], pageY: point[1], clientX: point[0], clientY: point[1]}];
+    e.initUIEvent('touchstart', true, true, window, 1);
+    target.dispatchEvent(e);
+    // ------ touchend ------
+    var e = document.createEvent('UIEvent');
+    var point = [100, 100];
+    e.changedTouches = [{pageX: point[0], pageY: point[1], clientX: point[0], clientY: point[1]}];
+    e.initUIEvent('touchend', true, true, window, 1);
+    target.dispatchEvent(e);
+    console.log(document.querySelector('h1').innerHTML.trim());
+    // > success
+    ```
+   */
   var exports = function (element, options) {
     options = options || {};
     options.data = options.data || {};
@@ -2077,7 +2262,7 @@ function compiler_jhtmls(node, bindObjectName) {
     if (!scriptElement || !parentElement) {
       return;
     }
-    var match = scriptElement.getAttribute('type').match(/text\/([\w]+)/);
+    var match = String(scriptElement.getAttribute('type')).match(/text\/([\w]+)/);
     if (!match) {
       return;
     }
@@ -2119,17 +2304,16 @@ function compiler_jhtmls(node, bindObjectName) {
     if (typeof options.init === 'function') {
       options.init.call(options.data, binder);
     }
+    function inputHandler(e) {
+      binder.triggerScopeEvent(e);
+    }
     ['click', 'dblclick', 'keydown', 'keyup', 'focusin', 'focusout', 'change'].forEach(function (eventName) {
       parentElement.addEventListener(eventName, function (e) {
         if (e.target.getAttribute(binder._eventAttributePrefix + 'input')) {
           if (eventName === 'focusin') {
-            e.target.addEventListener('input', function (e) {
-              binder.triggerScopeEvent(e);
-            });
+            e.target.addEventListener('input', inputHandler);
           } else if (eventName === 'focusout') {
-            e.target.removeEventListener('input', function (e) {
-              binder.triggerScopeEvent(e);
-            });
+            e.target.removeEventListener('input', inputHandler);
           }
         }
         var target = findEventTarget(parentElement, e.target, '[' + binder._eventAttributePrefix + eventName + ']');
@@ -2164,9 +2348,9 @@ function compiler_jhtmls(node, bindObjectName) {
     var templateType = match[1];
     var templateRender = binder.templateCompiler(templateType, scriptElement.innerHTML);
     if (templateRender) {
-      parentElement.innerHTML = templateRender(options.data || {});
+      parentElement.innerHTML = templateRender(options.data);
+      binder.$$scope.element = parentElement;
     }
-    binder.$$scope.element = parentElement;
     return options.data;
   };
   exports.Parser = Parser;
@@ -2285,6 +2469,7 @@ function compiler_jhtmls(node, bindObjectName) {
   }
   /*</function>*/
   exports.Ajax = {
+    send: h5ajax_send,
     post: h5ajax_post,
     get: h5ajax_get,
   };

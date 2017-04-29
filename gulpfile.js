@@ -20,9 +20,9 @@ gulp.task('example', function() {
     ])
     .pipe(examplejs({
       header: `
-global.jnodes = require('../src/jnodes.js');
+global.penjs = require('../src/penjs.js');
 global.ejs = require('ejs');
-global.jhtmls = require('jhtmls');
+global.compiler_ejs = require('jnodes/src/js/Compiler/ejs.js').compiler_ejs;
       `
     }))
     .pipe(gulp.dest('test'))
