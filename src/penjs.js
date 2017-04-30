@@ -6,11 +6,8 @@
   var Parser = jnodes.Parser;
   /*</jdists>*/
 
-  /*<jdists encoding="fndep" import="../node_modules/jnodes/src/js/Compiler/jhtmls.js" depend="compiler_jhtmls">*/
-  var compiler_jhtmls = require('../node_modules/jnodes/src/js/Compiler/jhtmls.js').compiler_jhtmls;
-  /*</jdists>*/
-  /*<jdists encoding="fndep" import="../node_modules/jnodes/src/js/Compiler/ejs.js" depend="compiler_ejs">*/
-  var compiler_ejs = require('../node_modules/jnodes/src/js/Compiler/ejs.js').compiler_ejs;
+  /*<jdists encoding="fndep" import="../node_modules/jnodes/lib/Adapter/jhtmls.js" depend="adapter_jhtmls">*/
+  var adapter_jhtmls = require('../node_modules/jnodes/lib/Adapter/jhtmls.js').adapter_jhtmls;
   /*</jdists>*/
 
   /*<jdists encoding="fndep" import="../node_modules/jhtmls/jhtmls.js" depend="jhtmls_render">*/
@@ -22,6 +19,7 @@
   /*</jdists>*/
 
   var penjs_guid = 0;
+  var penjs_adapters = {};
 
   /**
    * 创建 penjs 对象
@@ -180,6 +178,13 @@
     </div>
     ```
     ```js
+    penjs.registerAdapter('ejs', function (binder) {
+      binder.registerAdapter('ejs', function (templateCode, bindObjectName) {
+        var code = penjs.Parser.build(penjs.Parser.parse(templateCode), bindObjectName, adapter_ejs);
+        return ejs.compile(code);
+      });
+    });
+
     var pm = penjs('div', {
       methods: {
         change: function(info, title) {
@@ -325,20 +330,13 @@
     binder.registerChecker('keyup', keyChecker);
     binder.registerChecker('keydown', keyChecker);
 
-    binder.registerCompiler('jhtmls', function (templateCode, bindObjectName) {
-      var code = Parser.build(Parser.parse(templateCode), bindObjectName, compiler_jhtmls);
-      return jhtmls_render(code);
-    });
-
-    if (typeof ejs !== 'undefined' && ejs) {
-      binder.registerCompiler('ejs', function (templateCode, bindObjectName) {
-        var code = Parser.build(Parser.parse(templateCode), bindObjectName, compiler_ejs);
-        return ejs.compile(code);
-      });
+    var templateType = match[1];
+    var adapter = penjs_adapters[templateType];
+    if (adapter) {
+      adapter(binder);
     }
 
-    var templateType = match[1];
-    var templateRender = binder.templateCompiler(templateType, scriptElement.innerHTML);
+    var templateRender = binder.templateAdapter(templateType, scriptElement.innerHTML);
 
     if (templateRender) {
       parentElement.innerHTML = templateRender(options.data);
@@ -348,6 +346,24 @@
   };
 
   exports.Parser = Parser;
+
+  /**
+   * 注册模版适配器
+   *
+   * @param {String} templateType 模版类型
+   * @param {Function} adapter 适配器
+   */
+  function registerAdapter(templateType, adapter) {
+    penjs_adapters[templateType] = adapter;
+  }
+  exports.registerAdapter = registerAdapter;
+
+  registerAdapter('jhtmls', function (binder) {
+    binder.registerAdapter('jhtmls', function (templateCode, bindObjectName) {
+      var code = Parser.build(Parser.parse(templateCode), bindObjectName, adapter_jhtmls);
+      return jhtmls_render(code);
+    });
+  });
 
   /*<jdists encoding="fndep" import="../node_modules/h5ajax/h5ajax.js" depend="h5ajax_post,h5ajax_get,h5ajax_send">*/
   var h5ajax = require('../node_modules/h5ajax/h5ajax.js');

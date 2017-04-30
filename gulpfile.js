@@ -22,7 +22,7 @@ gulp.task('example', function() {
       header: `
 global.penjs = require('../src/penjs.js');
 global.ejs = require('ejs');
-global.compiler_ejs = require('jnodes/src/js/Compiler/ejs.js').compiler_ejs;
+global.adapter_ejs = require('jnodes/lib/Adapter/ejs.js').adapter_ejs;
       `
     }))
     .pipe(gulp.dest('test'))

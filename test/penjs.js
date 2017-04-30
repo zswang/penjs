@@ -1,7 +1,7 @@
 
 global.penjs = require('../src/penjs.js');
 global.ejs = require('ejs');
-global.compiler_ejs = require('jnodes/src/js/Compiler/ejs.js').compiler_ejs;
+global.adapter_ejs = require('jnodes/lib/Adapter/ejs.js').adapter_ejs;
       
 
 describe("src/penjs.js", function () {
@@ -207,6 +207,13 @@ describe("src/penjs.js", function () {
           
   it("penjs:init & ejs & tap", function () {
     examplejs_printLines = [];
+    penjs.registerAdapter('ejs', function (binder) {
+      binder.registerAdapter('ejs', function (templateCode, bindObjectName) {
+        var code = penjs.Parser.build(penjs.Parser.parse(templateCode), bindObjectName, adapter_ejs);
+        return ejs.compile(code);
+      });
+    });
+
     var pm = penjs('div', {
       methods: {
         change: function(info, title) {
