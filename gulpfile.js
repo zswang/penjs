@@ -66,6 +66,14 @@ gulp.task('build', function() {
     .pipe(gulp.dest('./'))
 })
 
-gulp.task('default', ['build', 'connect', 'watch', 'open'])
+gulp.task('adapter', function() {
+  gulp.src('./src/Adapter/*.js')
+    .pipe(jdists({
+      trigger: 'release'
+    }))
+    .pipe(gulp.dest('./lib/Adapter'))
+})
 
-gulp.task('dist', ['build'])
+gulp.task('default', ['build', 'adapter', 'connect', 'watch', 'open'])
+
+gulp.task('dist', ['build', 'adapter'])
