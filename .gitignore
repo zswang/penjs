@@ -32,6 +32,8 @@ node_modules
 !example/todomvc/node_modules/penjs/penjs.js
 !example/todomvc/node_modules/todomvc-app-css/index.css
 !example/todomvc/node_modules/todomvc-app-css/index.css
+!example/todomvc/node_modules/penjs/lib/Adapter/ejs.js
+!example/todomvc/node_modules/ejs/ejs.js
 
 # Bower
 coverage
