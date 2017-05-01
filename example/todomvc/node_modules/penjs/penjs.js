@@ -5,6 +5,7 @@ var parser_void_elements = [
     'link', 'menuitem', 'meta', 'param', 'source', 'track', 'wbr'
 ]; /*</function>*/
 /*<function name="parser_tokenizer" depend="parser_void_elements">*/
+var parser_guid = 0;
 function parser_tokenizer(code) {
     var resultNodes = [];
     /**
@@ -16,6 +17,7 @@ function parser_tokenizer(code) {
             return;
         }
         var node = {
+            id: (parser_guid++).toString(36),
             type: type,
             pos: pos,
             endpos: endpos,
@@ -111,58 +113,59 @@ function parser_tokenizer(code) {
  * @example parser_parse:base
   ```js
   var node = jnodes.Parser.parse(`<!--test--><div class="box"></div>`);
-  console.log(JSON.stringify(node));
+  console.log(JSON.stringify(node).replace(/"id":"\w+",/g, ''));
   // > {"type":"root","pos":0,"endpos":34,"children":[{"type":"comment","pos":0,"endpos":11,"value":"<!--test-->","indent":""},{"type":"block","pos":11,"endpos":34,"tag":"div","attrs":[{"name":"class","value":"box","quoted":"\""}],"indent":"","selfClosing":false,"children":[]}]}
   ```
  * @example parser_parse:text
   ```js
   var node = jnodes.Parser.parse(`hello`);
-  console.log(JSON.stringify(node));
+  console.log(JSON.stringify(node).replace(/"id":"\w+",/g, ''));
   // > {"type":"root","pos":0,"endpos":5,"children":[{"type":"text","pos":0,"endpos":5,"value":"hello"}]}
   ```
  * @example parser_parse:comment not closed.
   ```js
   var node = jnodes.Parser.parse(`<!--hello`);
-  console.log(JSON.stringify(node));
+  console.log(JSON.stringify(node).replace(/"id":"\w+",/g, ''));
   // > {"type":"root","pos":0,"endpos":9,"children":[{"type":"comment","pos":0,"endpos":9,"value":"<!--hello","indent":""}]}
   ```
  * @example parser_parse:attribute is emtpy
   ```js
   var node = jnodes.Parser.parse(`<div><input type=text readonly></div>`);
-  console.log(JSON.stringify(node));
+  console.log(JSON.stringify(node).replace(/"id":"\w+",/g, ''));
   // > {"type":"root","pos":0,"endpos":37,"children":[{"type":"block","pos":0,"endpos":37,"tag":"div","attrs":[],"indent":"","selfClosing":false,"children":[{"type":"single","pos":5,"endpos":31,"tag":"input","attrs":[{"name":"type","value":"text","quoted":""},{"name":"readonly","value":"","quoted":""}],"indent":"","selfClosing":true}]}]}
   ```
  * @example parser_parse:tag not closed
   ```js
   var node = jnodes.Parser.parse(`<input type=text readonly`);
-  console.log(JSON.stringify(node));
+  console.log(JSON.stringify(node).replace(/"id":"\w+",/g, ''));
   // > {"type":"root","pos":0,"endpos":25,"children":[{"type":"text","pos":0,"endpos":25,"value":"<input type=text readonly"}]}
   ```
  * @example parser_parse:tag asymmetric
   ```js
   var node = jnodes.Parser.parse(`<div><span></div></span>`);
-  console.log(JSON.stringify(node));
+  console.log(JSON.stringify(node).replace(/"id":"\w+",/g, ''));
   // * throw
   ```
  * @example parser_parse:tag asymmetric
   ```js
   var node = jnodes.Parser.parse(`<section><div></div>\n</span>`);
-  console.log(JSON.stringify(node));
+  console.log(JSON.stringify(node).replace(/"id":"\w+",/g, ''));
   // * throw
   ```
  * @example parser_parse:tag nesting
   ```js
   var node = jnodes.Parser.parse(`<div><div><div></div><div></div></div></div>`);
-  console.log(JSON.stringify(node));
+  console.log(JSON.stringify(node).replace(/"id":"\w+",/g, ''));
   // > {"type":"root","pos":0,"endpos":44,"children":[{"type":"block","pos":0,"endpos":44,"tag":"div","attrs":[],"indent":"","selfClosing":false,"children":[{"type":"block","pos":5,"endpos":38,"tag":"div","attrs":[],"indent":"","selfClosing":false,"children":[{"type":"block","pos":10,"endpos":21,"tag":"div","attrs":[],"indent":"","selfClosing":false,"children":[]},{"type":"block","pos":21,"endpos":32,"tag":"div","attrs":[],"indent":"","selfClosing":false,"children":[]}]}]}]}
   ```
  */
 function parser_parse(code) {
     var root = {
+        id: (parser_guid++).toString(36),
         type: 'root',
         pos: 0,
         endpos: code.length,
-        children: []
+        children: [],
     };
     var current = root;
     var tokens = parser_tokenizer(code);
@@ -918,21 +921,39 @@ var Binder = (function () {
             _this.lifecycleEvent(scope, 'create');
             _this.lifecycleEvent(scope, 'update');
         });
-        this._attrsRender = options.attrsRender || (function (scope, attrs) {
+        this._attrsRender = options.attrsRender || (function (scope, attrs, node) {
             if (!attrs) {
                 return '';
             }
             var dictValues = {};
             var dictQuoteds = {};
+            var hasScopeAttr = false;
             attrs.filter(function (attr) {
                 if (':' !== attr.name[0] && '@' !== attr.name[0]) {
                     return true;
                 }
                 var name = attr.name.slice(1);
-                if (name === _this._bindAttributeName || name === _this._dependAttributeName) {
-                    name = _this._scopeAttributeName;
+                if (name !== _this._bindAttributeName && name !== _this._dependAttributeName) {
+                    return true;
                 }
-                else if ('@' === attr.name[0]) {
+                name = _this._scopeAttributeName;
+                dictQuoteds[name] = attr.quoted;
+                dictValues[name] = [scope.id];
+                hasScopeAttr = true;
+                scope.methods = scope.methods || {};
+                Object.keys(scope.methods).forEach(function (key) {
+                    if (typeof scope.methods[key] === 'function') {
+                        if (!scope.methods[key].$$scope) {
+                            delete scope.methods[key];
+                        }
+                    }
+                });
+            }).filter(function (attr) {
+                if (':' !== attr.name[0] && '@' !== attr.name[0]) {
+                    return true;
+                }
+                var name = attr.name.slice(1);
+                if ('@' === attr.name[0]) {
                     var arr = name.split('.');
                     name = arr[0];
                     if (name === 'create') {
@@ -948,10 +969,6 @@ var Binder = (function () {
                 }
                 var values = dictValues[name] = dictValues[name] || [];
                 dictQuoteds[name] = attr.quoted;
-                if (name === _this._scopeAttributeName) {
-                    values.push(scope.id);
-                    return;
-                }
                 if (attr.value === '' || attr.value === null || attr.value === undefined ||
                     attr.value === false) {
                     return;
@@ -970,9 +987,19 @@ var Binder = (function () {
                         });
                         break;
                     case 'function':
-                        var methodId = "@" + (jnodes_guid++).toString(36);
                         scope.methods = scope.methods || {};
-                        scope.methods[methodId] = attr.value;
+                        var methodId = void 0;
+                        if (hasScopeAttr) {
+                            methodId = scope.methods["v:" + attr.value];
+                        }
+                        if (!methodId) {
+                            methodId = "@" + (jnodes_guid++).toString(36);
+                            scope.methods[methodId] = attr.value;
+                            if (hasScopeAttr) {
+                                attr.value.$$scope = scope;
+                                scope.methods["v:" + attr.value] = methodId;
+                            }
+                        }
                         values.push(methodId);
                         break;
                 }
@@ -1336,7 +1363,10 @@ var Binder = (function () {
   <div>
     <script type="text/jhtmls">
     <input type="text" @keyup.enter="pos.x = parseInt(this.value)" value="-1">
-    <div><button :bind="pos" @click="pos.x++" @update.none="console.info('none')">plus #{pos.x}</button></div>
+    <div>
+      <button :bind="pos" @click="pos.x++" @update.none="console.info('none')">plus #{pos.x}</button>
+    </div>
+    <h1 :bind="pos"><button @click="pos.x++">plus #{pos.x}</button></h1>
     </script>
   </div>
   ```
@@ -1494,7 +1524,7 @@ function adapter_jhtmls(node, bindObjectName) {
     node.beforebegin = node.beforebegin || '';
     varintAttrs += "" + indent + inserFlag + "];\n";
     node.beforebegin += varintAttrs;
-    node.overwriteAttrs = "!#{" + bindObjectName + "._attrsRender(_scope_, _attrs_)}";
+    node.overwriteAttrs = "!#{" + bindObjectName + "._attrsRender(_scope_, _attrs_, { tag: " + JSON.stringify(node.tag) + ", id: " + JSON.stringify(node.id) + " })}";
 } /*</function>*/
   /*<function name="jhtmls_isOutput">*/
   /**

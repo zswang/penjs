@@ -1,6 +1,6 @@
 {
   "name": "penjs",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Mobile-web small development framework.",
   "main": "penjs.js",
   "scripts": {
@@ -39,7 +39,7 @@
     "h5ajax": "^0.0.5",
     "h5tap": "^0.0.4",
     "jhtmls": "^1.1.11",
-    "jnodes": "^0.4.5",
+    "jnodes": "^0.4.10",
     "mockjs": "^1.0.1-beta3",
     "jsdom": "^9.12.0",
     "jshint": "^2.9.4",

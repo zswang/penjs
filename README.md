@@ -7,6 +7,14 @@ penjs
 
 Mobile-web small development framework.
 
+## API
+
+### constructer
+
+```js
+function penjs(element, options) {}
+```
+
 ## Example
 
 ```html
