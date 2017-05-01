@@ -1,4 +1,14 @@
 (function (exportName) {
+  /**
+   * @file penjs
+   * @url git+https://github.com/zswang/penjs.git
+   * Mobile-web small development framework.
+   * @author
+   *   zswang (http://weibo.com/zswang)
+   * @version 0.1.8
+   * @date 2017-05-01
+   * @license MIT
+   */
   /*<function name="parser_void_elements">*/
 var parser_void_elements = [
     'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'keygen',
@@ -112,9 +122,9 @@ function parser_tokenizer(code) {
  * @return 返回根节点
  * @example parser_parse:base
   ```js
-  var node = jnodes.Parser.parse(`<!--test--><div class="box"></div>`);
+  var node = jnodes.Parser.parse(`<!-- ts --><div class="box"></div>`);
   console.log(JSON.stringify(node).replace(/"id":"\w+",/g, ''));
-  // > {"type":"root","pos":0,"endpos":34,"children":[{"type":"comment","pos":0,"endpos":11,"value":"<!--test-->","indent":""},{"type":"block","pos":11,"endpos":34,"tag":"div","attrs":[{"name":"class","value":"box","quoted":"\""}],"indent":"","selfClosing":false,"children":[]}]}
+  // > {"type":"root","pos":0,"endpos":34,"children":[{"type":"comment","pos":0,"endpos":11,"value":"<!-- ts -->","indent":""},{"type":"block","pos":11,"endpos":34,"tag":"div","attrs":[{"name":"class","value":"box","quoted":"\""}],"indent":"","selfClosing":false,"children":[]}]}
   ```
  * @example parser_parse:text
   ```js
@@ -124,9 +134,9 @@ function parser_tokenizer(code) {
   ```
  * @example parser_parse:comment not closed.
   ```js
-  var node = jnodes.Parser.parse(`<!--hello`);
+  var node = jnodes.Parser.parse(`<!-- okay`);
   console.log(JSON.stringify(node).replace(/"id":"\w+",/g, ''));
-  // > {"type":"root","pos":0,"endpos":9,"children":[{"type":"comment","pos":0,"endpos":9,"value":"<!--hello","indent":""}]}
+  // > {"type":"root","pos":0,"endpos":9,"children":[{"type":"comment","pos":0,"endpos":9,"value":"<!-- okay","indent":""}]}
   ```
  * @example parser_parse:attribute is emtpy
   ```js
@@ -158,6 +168,12 @@ function parser_tokenizer(code) {
   console.log(JSON.stringify(node).replace(/"id":"\w+",/g, ''));
   // > {"type":"root","pos":0,"endpos":44,"children":[{"type":"block","pos":0,"endpos":44,"tag":"div","attrs":[],"indent":"","selfClosing":false,"children":[{"type":"block","pos":5,"endpos":38,"tag":"div","attrs":[],"indent":"","selfClosing":false,"children":[{"type":"block","pos":10,"endpos":21,"tag":"div","attrs":[],"indent":"","selfClosing":false,"children":[]},{"type":"block","pos":21,"endpos":32,"tag":"div","attrs":[],"indent":"","selfClosing":false,"children":[]}]}]}]}
   ```
+ * @example parser_parse:attribute spance
+  ```js
+  var node = jnodes.Parser.parse(`<input type="text" placeholder="What needs to be done?"/>`);
+  console.log(JSON.stringify(node).replace(/"id":"\w+",/g, ''));
+  // > {"type":"root","pos":0,"endpos":57,"children":[{"type":"single","pos":0,"endpos":57,"tag":"input","attrs":[{"name":"type","value":"text","quoted":"\""},{"name":"placeholder","value":"What needs to be done?","quoted":"\""}],"indent":"","selfClosing":true}]}
+  ```
  */
 function parser_parse(code) {
     var root = {
@@ -169,9 +185,6 @@ function parser_parse(code) {
     };
     var current = root;
     var tokens = parser_tokenizer(code);
-    /*<debug>
-    console.log(JSON.stringify(tokens, null, '  '))
-    //</debug>*/
     var lefts = []; // 左边标签集合，用于寻找配对的右边标签
     tokens.forEach(function (token) {
         switch (token.type) {
@@ -196,9 +209,6 @@ function parser_parse(code) {
                     buffer = code.slice(0, token.endpos).split('\n');
                     line = buffer.length;
                     col = buffer[buffer.length - 1].length + 1;
-                    /*<debug>*/
-                    lightcode(buffer, 5);
-                    /*</debug>*/
                     error = 'No start tag. (line:' + token.line + ' col:' + token.col + ')';
                     console.error(error);
                     throw error;
@@ -224,9 +234,6 @@ function parser_parse(code) {
                             buffer = code.slice(0, token.endpos).split('\n');
                             line = buffer.length;
                             col = buffer[buffer.length - 1].length + 1;
-                            /*<debug>*/
-                            lightcode(buffer, 5);
-                            /*</debug>*/
                             error = 'No start tag. (line:' + token.line + ' col:' + token.col + ')';
                             console.error(error);
                             throw error;
@@ -240,22 +247,9 @@ function parser_parse(code) {
                 break;
         }
     });
-    /*<debug>
-    console.log(JSON.stringify(root, null, '  '))
-    //</debug>*/
     return root;
 }
-/*<debug>*/
-function lightcode(buffer, count) {
-    var len = buffer.length.toString().length;
-    var lines = buffer.slice(-count);
-    for (var i = lines.length - 1; i >= 0; i--) {
-        var l = (buffer.length + i - lines.length + 1).toString();
-        l = (new Array(len - l.length + 1)).join(' ') + l; // 前面补空格
-        lines[i] = l + (i === lines.length - 1 ? ' > ' : '   ') + '| ' + lines[i];
-    }
-    console.log(lines.join('\n'));
-} /*</debug>*/ /*</function>*/
+/*</function>*/
 /*<function name="parser_build">*/
 /**
  * @preview
@@ -1005,6 +999,7 @@ var Binder = (function () {
                 }
             }).forEach(function (attr) {
                 var values = dictValues[attr.name] = dictValues[attr.name] || [];
+                dictQuoteds[attr.name] = attr.quoted;
                 if (attr.value === '' || values.indexOf(attr.value) >= 0) {
                     return;
                 }
@@ -1362,7 +1357,7 @@ var Binder = (function () {
   ```html
   <div>
     <script type="text/jhtmls">
-    <input type="text" @keyup.enter="pos.x = parseInt(this.value)" value="-1">
+    <input type=text @keyup.enter="pos.x = parseInt(this.value)" value="-1">
     <div>
       <button :bind="pos" @click="pos.x++" @update.none="console.info('none')">plus #{pos.x}</button>
     </div>
@@ -1423,7 +1418,7 @@ var Binder = (function () {
   ```html
   <div>
     <script type="text/jhtmls">
-    <div :bind="books">
+    <div :bind="books" class="list box">
       <h4>#{books.filter(function (book) { return book.star; }).length}</h4>
       <ul>
       books.forEach(function (book) {
@@ -1459,6 +1454,8 @@ var Binder = (function () {
   data.books[1].star = true;
   console.log(div.querySelector('h4').innerHTML);
   // > 2
+  console.log(div.querySelector('div').className);
+  // > list box
   ```
    */
 function adapter_jhtmls(node, bindObjectName) {

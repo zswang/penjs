@@ -2,7 +2,7 @@
   "private": true,
   "dependencies": {
     "ejs": "^2.5.6",
-    "penjs": "^0.1.4",
+    "penjs": "^0.1.8",
     "todomvc-app-css": "^2.0.0",
     "todomvc-common": "^1.0.1"
   }

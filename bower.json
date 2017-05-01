@@ -1,8 +1,11 @@
 {
   "name": "penjs",
   "description": "Mobile-web small development framework.",
-  "version": "0.1.4",
-  "author": "",
+  "version": "0.1.8",
+  "author": {
+    "name": "zswang",
+    "url": "http://weibo.com/zswang"
+  },
   "keywords": [
     "penjs"
   ]

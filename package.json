@@ -1,6 +1,6 @@
 {
   "name": "penjs",
-  "version": "0.1.4",
+  "version": "0.1.8",
   "description": "Mobile-web small development framework.",
   "main": "penjs.js",
   "scripts": {
@@ -20,8 +20,11 @@
     "type": "git",
     "url": "git+https://github.com/zswang/penjs.git"
   },
-  "author": "",
-  "license": "ISC",
+  "author": {
+    "name": "zswang",
+    "url": "http://weibo.com/zswang"
+  },
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/zswang/penjs/issues"
   },
@@ -39,7 +42,7 @@
     "h5ajax": "^0.0.5",
     "h5tap": "^0.0.4",
     "jhtmls": "^1.1.11",
-    "jnodes": "^0.4.10",
+    "jnodes": "^0.4.17",
     "mockjs": "^1.0.1-beta3",
     "jsdom": "^9.12.0",
     "jshint": "^2.9.4",
