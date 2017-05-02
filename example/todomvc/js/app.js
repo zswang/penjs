@@ -1,17 +1,16 @@
 (function () {
-  // localStorage persistence
   var STORAGE_KEY = 'todos-penjs-0.0'
   var todoStorage = {
     fetch: function () {
       try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      } catch(ex) {
-        return [];
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+      } catch (ex) {
+        return []
       }
     },
     save: function (todos) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
-    }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(todos))
+    },
   }
 
   var pm = penjs('.todoapp', {
@@ -23,68 +22,61 @@
     methods: {
       addTodo: function (value) {
         if (!value) {
-          return;
+          return
         }
         this.todos.push({
-          id: todoStorage.uid++,
           title: value,
-          completed: false
-        });
+          completed: false,
+        })
       },
 
       editTodo: function (todo) {
-        this.editedTodo = todo;
+        this.editedTodo = todo
       },
 
       removeTodo: function (todo) {
-        var index = this.todos.indexOf(todo);
+        var index = this.todos.indexOf(todo)
         if (index >= 0) {
-          this.todos.splice(index, 1);
+          this.todos.splice(index, 1)
         }
       },
 
       doneEdit: function (todo, value) {
-        todo.title = value;
-        this.editedTodo = null;
+        todo.title = value
+        this.editedTodo = null
       },
 
-      cancelEdit: function(todo) {
-        this.editedTodo = null;
+      cancelEdit: function (todo) {
+        this.editedTodo = null
       },
 
       allDone: function (completed) {
         this.todos.forEach(function (todo) {
-          todo.completed = completed;
-        });
+          todo.completed = completed
+        })
       },
 
       removeCompleted: function () {
         this.todos = this.todos.filter(function (todo) {
-          return !todo.completed;
-        });
+          return !todo.completed
+        })
       },
 
       saveTodos: function () {
-        todoStorage.save(this.todos);
+        todoStorage.save(this.todos)
       },
 
     }
-  });
+  })
 
   function getVisibility() {
-    switch (location.hash) {
-      case '#/completed':
-        return 'completed';
-        break;
-      case '#/active':
-        return 'active';
-        break;
-      default:
-        return 'all';
-    }
+    return {
+      '#/completed': 'completed',
+      '#/active': 'active',
+    }[location.hash] || 'all'
   }
 
   window.addEventListener('hashchange', function () {
     pm.visibility = getVisibility()
-  });
-})();
+  })
+})()
