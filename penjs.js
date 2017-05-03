@@ -5,8 +5,8 @@
    * Mobile-web small development framework.
    * @author
    *   zswang (http://weibo.com/zswang)
-   * @version 0.1.8
-   * @date 2017-05-01
+   * @version 0.1.9
+   * @date 2017-05-03
    * @license MIT
    */
   /*<function name="parser_void_elements">*/
@@ -1732,7 +1732,7 @@ function adapter_jhtmls(node, bindObjectName) {
     lines.unshift('with(this){');
     lines.push('}');
     return new Function(
-      '_output_', '_encode_', 'helper', 'jhtmls', 'require',
+      '_output_', '_encode_', 'helper',
       lines.join('\n')
     );
   }
@@ -1813,19 +1813,14 @@ function adapter_jhtmls(node, bindObjectName) {
      * @param {Object} h 辅助对象 helper
      */
     var format = function (d, h) {
-      var _require;
-      /* istanbul ignore else */
-      if (typeof require === 'function') {
-        _require = require;
-      }
       // h = h || fn;
       var output = [];
       if (typeof h === 'undefined') {
         h = function (d) {
-          fn.call(d, output, encodeHTML, h, exports, _require);
+          fn.call(d, output, encodeHTML, h);
         };
       }
-      fn.call(d, output, encodeHTML, h, exports, _require);
+      fn.call(d, output, encodeHTML, h);
       return output.join('');
     };
     if (arguments.length <= 1) { // 无渲染数据
