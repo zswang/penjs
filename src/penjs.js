@@ -300,8 +300,8 @@
       return result;
     }
     var binderName = 'binder' + (penjs_guid++).toString(36);
-    var binder = penjs[binderName] = new Binder({
-      bindObjectName: 'penjs.' + binderName,
+    var binder = exports[binderName] = new Binder({
+      bindObjectName: exportName + '.' + binderName,
       imports: methodsBind(options.methods, options.data),
     });
 
@@ -400,6 +400,11 @@
   };
 
   /* istanbul ignore next */
+  if (typeof window !== 'undefined') {
+    window[exportName] = exports;
+  }
+
+  /* istanbul ignore next */
   if (typeof define === 'function') {
     if (define.amd || define.cmd) {
       define(function () {
@@ -408,7 +413,5 @@
     }
   } else if (typeof module !== 'undefined' && module.exports) {
     module.exports = exports;
-  } else {
-    window[exportName] = exports;
   }
 })('penjs');

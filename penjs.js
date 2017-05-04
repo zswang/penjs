@@ -5,8 +5,8 @@
    * Mobile-web small development framework.
    * @author
    *   zswang (http://weibo.com/zswang)
-   * @version 0.1.9
-   * @date 2017-05-03
+   * @version 0.1.11
+   * @date 2017-05-04
    * @license MIT
    */
   /*<function name="parser_void_elements">*/
@@ -2328,8 +2328,8 @@ function adapter_jhtmls(node, bindObjectName) {
       return result;
     }
     var binderName = 'binder' + (penjs_guid++).toString(36);
-    var binder = penjs[binderName] = new Binder({
-      bindObjectName: 'penjs.' + binderName,
+    var binder = exports[binderName] = new Binder({
+      bindObjectName: exportName + '.' + binderName,
       imports: methodsBind(options.methods, options.data),
     });
     if (typeof options.init === 'function') {
@@ -2521,6 +2521,10 @@ function adapter_jhtmls(node, bindObjectName) {
     get: h5ajax_get,
   };
   /* istanbul ignore next */
+  if (typeof window !== 'undefined') {
+    window[exportName] = exports;
+  }
+  /* istanbul ignore next */
   if (typeof define === 'function') {
     if (define.amd || define.cmd) {
       define(function () {
@@ -2529,7 +2533,5 @@ function adapter_jhtmls(node, bindObjectName) {
     }
   } else if (typeof module !== 'undefined' && module.exports) {
     module.exports = exports;
-  } else {
-    window[exportName] = exports;
   }
 })('penjs');

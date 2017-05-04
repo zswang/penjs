@@ -1,6 +1,6 @@
 {
   "name": "penjs",
-  "version": "0.1.9",
+  "version": "0.1.11",
   "description": "Mobile-web small development framework.",
   "main": "penjs.js",
   "scripts": {
